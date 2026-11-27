@@ -70,7 +70,7 @@ export function DprCard({ p, ranked }: { p: PlayerRow; ranked: number }) {
           <p className="mt-3 text-sm tnum">
             {p.dprRank ? (
               <><b>No. {p.dprRank}</b><span className="text-mute"> of {ranked.toLocaleString("en-US")} among players with {DPR_MIN_POSS}+ possessions</span></>
-            ) : <span className="text-mute">Unranked: needs {DPR_MIN_POSS}+ possessions</span>}
+            ) : <span className="text-mute">Unranked: {poss.toLocaleString("en-US")} of the {DPR_MIN_POSS} possessions needed so far</span>}
           </p>
           {thin && (
             <p className="mt-1 text-xs text-mute">

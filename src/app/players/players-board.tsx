@@ -163,10 +163,17 @@ export default function PlayersBoard() {
   // narrows what's shown, so searching "Jake" shows each Jake at his real rank, not 1, 2, 3…
   const ranked = useMemo(() => pool.filter(r => (conf === "all" || r.team?.confSlug === conf) && (pos === "all" || r.posN === pos) && starOk(stars, r.stars)),
     [pool, conf, pos, stars]);
+  const rankedIds = useMemo(() => new Set(ranked.map(r => r.id)), [ranked]);
+  // A name search looks past the minutes / possessions / games floors (not conference, position or
+  // stars), so every player can be found. Players below the floor show unranked and greyed.
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return !n ? ranked : ranked.filter(r => r.name.toLowerCase().includes(n) || (r.team && (r.team.name.toLowerCase().includes(n) || r.team.short.toLowerCase() === n)));
-  }, [ranked, q]);
+    if (!n) return ranked;
+    const hit = (r: PlayerRow) => r.name.toLowerCase().includes(n) || (!!r.team && (r.team.name.toLowerCase().includes(n) || r.team.short.toLowerCase() === n));
+    return all.filter(r => hit(r) && (conf === "all" || r.team?.confSlug === conf) && (pos === "all" || r.posN === pos) && starOk(stars, r.stars));
+  }, [all, ranked, q, conf, pos, stars]);
+  const belowFloor = useMemo(() => rows.filter(r => !rankedIds.has(r.id)), [rows, rankedIds]);
+  const floorText = impact ? `${minPoss}-possession` : `${minMin}-minute`;
 
   const { stats } = VIEW_STATS[view];
   const sort = sortKey && stats.some(s => s.key === sortKey) ? sortKey : VIEW_STATS[view].sort;
@@ -182,7 +189,9 @@ export default function PlayersBoard() {
   }, [stats, pool]);
 
   const columns = useMemo<Column<PlayerRow>[]>(() => [
-    { key: "rk", label: "#", title: "Rank in the current sort among players who meet the filters. Searching a name doesn't change it.", value: () => null, sortable: false, sticky: true, width: 40, render: (_r, i) => <span className="rank-cell text-mute">{i + 1}</span> },
+    { key: "rk", label: "#", title: "Rank in the current sort among players who meet the filters. Searching a name doesn't change it.", value: () => null, sortable: false, sticky: true, width: 40, render: (r, i) => rankedIds.has(r.id)
+      ? <span className="rank-cell text-mute">{i + 1}</span>
+      : <span className="rank-cell text-dim" title="Below the floor for this view, so unranked">—</span> },
     {
       key: "name", label: "Player", csvLabel: "Player", align: "l", value: r => r.name, first: "asc", sticky: true, width: 196,
       render: r => (
@@ -208,7 +217,7 @@ export default function PlayersBoard() {
         render: r => {
           const v = s.get(r);
           if (v === null) return <span className="text-dim">—</span>;
-          const okSample = !s.ok || s.ok(r);
+          const okSample = (!s.ok || s.ok(r)) && rankedIds.has(r.id);
           const bg = s.heat === false || !okSample ? undefined : heatPct(pools.get(s.key)?.pct(v, s.invert));
           return (
             <span className={`inline-block min-w-[2.9rem] rounded px-1.5 py-0.5 ${okSample ? "" : "text-dim"}`} style={{ background: bg }} title={okSample ? undefined : "Small sample"}>
@@ -226,7 +235,7 @@ export default function PlayersBoard() {
       key: "conf", label: "Conf", csvLabel: "Conference", align: "l", value: r => r.team?.confName ?? null, first: "asc",
       render: r => r.team ? <Link href={`/conferences/${r.team.confSlug}/`} className="text-mute hover:text-ink">{r.team.confName}</Link> : <span className="text-mute">—</span>,
     },
-  ], [stats, pools]);
+  ], [stats, pools, rankedIds]);
 
   if (players.status === "error" || teams.status === "error") return <ErrorState message={players.error ?? teams.error ?? "Could not load players."} retry={() => { players.retry(); teams.retry(); }} />;
   if (!players.data || !teams.data) return <Loading label="Loading players" />;
@@ -301,21 +310,30 @@ export default function PlayersBoard() {
         <span><i className="mr-1.5 inline-block h-2 w-3 rounded-sm bg-off align-middle" />Offense</span>
         <span><i className="mr-1.5 inline-block h-2 w-3 rounded-sm bg-def align-middle" />Defense</span>
         <span className="hidden sm:inline">
-          Tint: <span className="text-win">top</span> / <span className="text-loss">bottom</span> of the {pool.length.toLocaleString("en-US")} players with {impact ? (minPoss ? `${minPoss}+ possessions` : "any possessions") : minMin ? `${minMin}+ mpg` : "any minutes"}{minG > 1 ? ` and ${minG}+ games` : ""}. # = rank among the {ranked.length.toLocaleString("en-US")} players who meet the filters; a name search keeps it. Grey values are small samples{impact ? `; DPR is early-season and ± one standard error, so overlapping players are statistically tied. Ranks need ${DPR_MIN_POSS}+ possessions` : ""}.
+          Tint: <span className="text-win">top</span> / <span className="text-loss">bottom</span> of the {pool.length.toLocaleString("en-US")} players with {impact ? (minPoss ? `${minPoss}+ possessions` : "any possessions") : minMin ? `${minMin}+ mpg` : "any minutes"}{minG > 1 ? ` and ${minG}+ games` : ""}. # = rank among the {ranked.length.toLocaleString("en-US")} players who meet the filters; a name search keeps it and also finds players below the floor (unranked). Grey values are small samples{impact ? `; DPR is early-season and ± one standard error, so overlapping players are statistically tied. Ranks need ${DPR_MIN_POSS}+ possessions` : ""}.
         </span>
       </div>
       {rows.length === 0 ? (
         <div className="deck flex flex-col items-start gap-3 p-6">
           <p className="font-semibold">No players match these filters</p>
-          <p className="text-sm text-mute">{q.trim() ? `Nobody named “${q.trim()}” clears the current filters. ` : ""}Lower the {impact ? "possessions" : "minutes"} or games floor, or widen the conference, position and stars.</p>
+          <p className="text-sm text-mute">{q.trim() ? `Nobody named “${q.trim()}” in this conference, position or stars filter. ` : ""}Lower the {impact ? "possessions" : "minutes"} or games floor, or widen the conference, position and stars.</p>
           <button className="btn" onClick={reset}>Reset filters</button>
         </div>
       ) : (
+        <>
+        {belowFloor.length > 0 && (
+          <p className="mb-2 text-[13px] text-mute" data-testid="below-floor-note">
+            {belowFloor.length === 1
+              ? `${belowFloor[0].name} is below the ${floorText} floor${impact ? ` (${belowFloor[0].onPoss ?? 0} so far)` : minG > 1 ? ` or the ${minG}-game floor` : ""}, so he's shown greyed and unranked.`
+              : `${belowFloor.length} of these players are below the ${floorText} floor${minG > 1 ? ` or the ${minG}-game floor` : ""}, so they're shown greyed and unranked.`}
+          </p>
+        )}
         <div className={ROW_LINK_CLASS} onClick={followRowLink}>
         <DataTable key={`${view}:${sort}`} rows={rows} rankRows={ranked} columns={columns} rowKey={r => r.id} initialSort={sort} initialDir={stats.find(s => s.key === sort)?.invert ? "asc" : "desc"}
           rowProps={r => peek.bind(() => ({ kind: "player", id: r.id, name: r.name, pos: r.posN ? POS_WORD[r.posN] : null, team: r.team ? { name: r.team.name, slug: r.team.slug, logo: r.team.logo } : null, stats: headlineStats(r) }))}
           pageSize={100} csvName={`d1hoops-players-${slugOf(view)}.csv`} caption={`Player leaderboard: ${view}`} maxHeight="78vh" />
         </div>
+        </>
       )}
       {peek.sheet}
     </section>
