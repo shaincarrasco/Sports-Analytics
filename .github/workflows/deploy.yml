@@ -75,6 +75,9 @@ jobs:
       - name: Fetch news, previews/recaps, polls and injury reports (Rust)
         continue-on-error: true
         run: cargo run --release --manifest-path live/Cargo.toml --bin feeds
+      - name: Add games the schedule provider hasn't listed yet (ESPN scoreboard, today + 3 days)
+        continue-on-error: true
+        run: node scripts/merge-espn-schedule.mjs
       - name: Fill results the schedule provider hasn't published yet (ESPN box scores)
         run: node scripts/merge-espn-finals.mjs
       - name: Calculate DHR v2 ratings, walk-forward predictions and backtest
