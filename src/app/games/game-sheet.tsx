@@ -19,6 +19,7 @@ import TvBadges from "@/components/tv-badges";
 import ArticleList from "@/components/article-list";
 import PickEm from "./pick-em";
 import GameBreakdown from "./breakdown/game-breakdown";
+import GamePreview from "./preview/game-preview";
 import WhosOut from "@/components/whos-out";
 import { useInjuries } from "@/lib/injury-hooks";
 import { setShowProjections, useShowProjections } from "@/lib/show-projections";
@@ -110,6 +111,7 @@ export default function GameSheet({ g: gIn, live: liveIn, onClose }: { g: Game; 
           {isLiveNow && <MomentList g={g} live={live} summary={detail.data} />}
           {played && <GameFlow g={g} live={live} summary={detail.data} />}
           {played && <LiveDetail g={g} d={detail} mode={mode} espnId={espnId} onLoad={() => setWantDetail(true)} />}
+          {!final && <GamePreview g={g} />}
           {!final && <Availability g={g} />}
           <Projection g={g} />
           {showProj && <GameBreakdown g={g} />}
