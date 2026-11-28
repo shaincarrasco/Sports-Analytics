@@ -57741,7 +57741,7 @@
    "away": "Auburn-Montgomery",
    "reason": "no-line",
    "espnEventId": "401919021",
-   "tries": 2
+   "tries": 3
   },
   "375373": {
    "day": "2026-11-27",
@@ -57749,7 +57749,7 @@
    "away": "NC Wesleyan",
    "reason": "no-line",
    "espnEventId": "401918980",
-   "tries": 1
+   "tries": 2
   },
   "378037": {
    "day": "2026-11-16",
@@ -58021,7 +58021,7 @@
    "away": "Clarke",
    "reason": "no-line",
    "espnEventId": "401929407",
-   "tries": 2
+   "tries": 3
   },
   "378133": {
    "day": "2026-11-27",
@@ -58029,7 +58029,7 @@
    "away": "Lane College",
    "reason": "no-line",
    "espnEventId": "401929381",
-   "tries": 1
+   "tries": 2
   },
   "378679": {
    "day": "2026-11-23",
@@ -58045,7 +58045,7 @@
    "away": "Southern Wesleyan",
    "reason": "no-line",
    "espnEventId": "401933055",
-   "tries": 1
+   "tries": 2
   },
   "378683": {
    "day": "2026-11-17",
@@ -59599,5 +59599,5 @@
    }
   }
  },
- "updatedAt": "2026-11-28T07:45:41.447Z"
+ "updatedAt": "2026-11-28T16:54:08.372Z"
 }
